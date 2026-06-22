@@ -4,12 +4,16 @@
         {
             "src": "api/index.php",
             "use": "vercel-php@0.9.0"
+        },
+        {
+            "src": "public/**",
+            "use": "@vercel/static"
         }
     ],
     "routes": [
         {
-            "src": "/(build|assets|css|js|images)/(.*)",
-            "dest": "/public/$1/$2"
+            "src": "/build/(.*)",
+            "dest": "/public/build/$1"
         },
         {
             "src": "/(.*)",
