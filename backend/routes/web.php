@@ -104,6 +104,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/tantangan/{tantangan}/edit', [\App\Http\Controllers\AdminTantanganController::class, 'edit'])->name('admin.tantangan.edit');
         Route::put('/tantangan/{tantangan}', [\App\Http\Controllers\AdminTantanganController::class, 'update'])->name('admin.tantangan.update');
         Route::delete('/tantangan/{tantangan}', [\App\Http\Controllers\AdminTantanganController::class, 'destroy'])->name('admin.tantangan.destroy');
+        Route::post('/tantangan/generate-ai', [\App\Http\Controllers\AdminTantanganController::class, 'generateAi'])->name('admin.tantangan.generate-ai');
 
         // Manajemen Pengguna (Approval)
         Route::get('/pengguna', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');

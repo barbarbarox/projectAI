@@ -42,7 +42,7 @@ class AnalisisLogService
             $tugas = $this->buildLogPrompt($format, $stats, $anomalies, $summary, $entries);
 
             try {
-                $ragData = ['konteks' => '', 'peringatan' => null];
+                $ragData = ['konteks' => '', 'peringatan' => null, 'chunks' => []];
                 if ($useRag) {
                     $ragData = $this->ragService->getKonteks($summary);
                 } else {
@@ -58,6 +58,11 @@ class AnalisisLogService
                 if (!is_array($hasil)) {
                     Log::error('Log analysis: Gagal parse AI response');
                     $hasil = $this->fallbackResult($stats, $anomalies);
+                }
+
+                // Propagate RAG references
+                if ($useRag && !empty($ragData['chunks'])) {
+                    $hasil['rag_references'] = $ragData['chunks'];
                 }
             } catch (\Exception $e) {
                 Log::error('Log analysis AI error: ' . $e->getMessage());

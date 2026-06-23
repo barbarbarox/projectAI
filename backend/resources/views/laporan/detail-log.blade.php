@@ -172,51 +172,8 @@
     </div>
     @endif
 
-    {{-- RAG References --}}
-    @if(isset($scan->rag_references) && is_array($scan->rag_references) && count($scan->rag_references) > 0)
-    <div class="rounded-2xl bg-[#0f1629] border border-[#1e2d4a] p-6">
-        <h3 class="text-sm font-semibold text-[#00d4ff] mb-4">📚 Referensi Knowledge Base (RAG)</h3>
-        
-        @php
-            $uniqueSources = collect($scan->rag_references)->pluck('source')->unique()->filter()->values();
-            $sourceLabels = [
-                'cisa-kev' => 'CISA KEV',
-                'attck' => 'MITRE ATT&CK',
-                'cwe' => 'CWE',
-                'capec' => 'CAPEC',
-                'owasp-cheatsheet' => 'OWASP',
-                'nvd-cve' => 'NVD CVE',
-                'huggingface' => 'HuggingFace Dataset'
-            ];
-        @endphp
-        @if($uniqueSources->count() > 0)
-        <div class="mb-4">
-            <p class="text-xs text-[#94a3b8] mb-2">Sumber Data yang Digunakan:</p>
-            <div class="flex flex-wrap gap-2">
-                @foreach($uniqueSources as $src)
-                <div class="px-3 py-1.5 rounded-lg bg-[#0a0e1a] border border-[#1e2d4a] flex items-center gap-2">
-                    <span class="text-base">📌</span>
-                    <span class="text-sm font-medium text-[#e2e8f0]">{{ $sourceLabels[str_replace('hf:', '', $src)] ?? strtoupper(str_replace('hf:', '', $src)) }}</span>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        <div class="grid gap-3">
-            <p class="text-[10px] text-[#64748b] italic mb-1">* Catatan: Dokumen sumber asli di bawah ini mungkin berbahasa Inggris dari database internasional (NVD, dll), namun hasil akhir analisis di atas telah sepenuhnya diterjemahkan ke Bahasa Indonesia.</p>
-            @foreach(array_slice($scan->rag_references, 0, 5) as $ref)
-            <div class="rounded-xl bg-[#0a0e1a] border border-[#1e2d4a] p-4 text-sm">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="px-2 py-0.5 rounded text-[10px] bg-[#7c3aed]/10 text-[#7c3aed] font-medium border border-[#7c3aed]/20">{{ $ref['source'] ?? 'General' }}</span>
-                    <span class="text-xs text-[#94a3b8]">Skor Relevansi: {{ round(($ref['sem_score'] ?? $ref['score'] ?? 0) * 100) }}%</span>
-                </div>
-                <p class="text-[#64748b] text-xs leading-relaxed line-clamp-3 hover:line-clamp-none transition-all">{{ $ref['content'] ?? '' }}</p>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
+    {{-- RAG Source Info Box --}}
+    <x-rag-source-info :scan="$scan" />
 
     {{-- Section 7: Disclaimer AI --}}
     <div class="rounded-xl bg-yellow-500/5 border border-yellow-500/20 p-4">
