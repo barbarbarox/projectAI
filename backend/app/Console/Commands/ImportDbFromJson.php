@@ -9,10 +9,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 
-#[Signature('db:import-json')]
-#[Description('Import Supabase DB from JSON into current Database (MySQL)')]
 class ImportDbFromJson extends Command
 {
+    protected $signature = 'db:import-json';
+    protected $description = 'Import Supabase DB from JSON into current Database (MySQL)';
+
     public function handle()
     {
         $path = storage_path('app/db_backup.json');

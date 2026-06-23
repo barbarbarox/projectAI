@@ -8,10 +8,11 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
-#[Signature('db:export-json')]
-#[Description('Export Supabase DB to JSON')]
 class ExportDbToJson extends Command
 {
+    protected $signature = 'db:export-json';
+    protected $description = 'Export Supabase DB to JSON';
+
     public function handle()
     {
         $this->info('Starting database export from Supabase (pgsql)...');
