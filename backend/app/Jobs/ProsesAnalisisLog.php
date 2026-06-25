@@ -6,6 +6,7 @@ use App\Models\Scan;
 use App\Models\Temuan;
 use App\Models\SimulasiSerangan;
 use App\Services\AnalisisLogService;
+use App\Traits\NotifyScanComplete;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProsesAnalisisLog implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, NotifyScanComplete;
 
     public int $tries = 2;
     public int $timeout = 300;
@@ -67,6 +68,8 @@ class ProsesAnalisisLog implements ShouldQueue
                 ],
                 'selesai_at' => now(),
             ]);
+
+            $this->notifyScanCompleteViaWa($this->scan);
 
             // Simpan temuan dari AI
             foreach ($hasil['temuan'] ?? [] as $t) {

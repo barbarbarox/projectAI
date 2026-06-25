@@ -13,6 +13,8 @@
     <style>
         @keyframes bounce-in { 0% { opacity:0; transform:translateY(-12px) scale(0.95); } 60% { transform:translateY(4px) scale(1.02); } 100% { opacity:1; transform:translateY(0) scale(1); } }
         .animate-bounce-in { animation: bounce-in 0.5s ease-out; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 20px rgba(239,68,68,0.6); } }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
     </style>
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
         <div class="absolute -top-40 -right-40 w-80 h-80 bg-[#00d4ff]/5 rounded-full blur-3xl"></div>
@@ -31,6 +33,20 @@
         </div>
 
         <div class="bg-[#0f1629] rounded-2xl border border-[#1e2d4a] p-8 shadow-2xl">
+            {{-- Rate Limit / Throttle Warning --}}
+            @if($errors->has('throttle'))
+            <div class="mb-6 px-4 py-4 rounded-xl bg-red-500/10 border border-red-500/40 text-red-300 text-sm animate-bounce-in animate-pulse-glow" x-data="{ show: true }" x-show="show">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl flex-shrink-0">⛔</span>
+                    <div class="flex-1">
+                        <p class="font-bold text-red-200 text-base">Sesi Diblokir!</p>
+                        <p class="text-red-400 mt-1">{{ $errors->first('throttle') }}</p>
+                    </div>
+                    <button @click="show = false" class="text-red-400/50 hover:text-red-300 flex-shrink-0">&times;</button>
+                </div>
+            </div>
+            @endif
+
             @if(session('error'))
             <div class="mb-6 px-4 py-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm flex items-center gap-3 animate-bounce-in" x-data="{ show: true }" x-show="show" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
                 <span class="text-2xl flex-shrink-0">🔐</span>
@@ -48,10 +64,12 @@
             </div>
             @endif
 
-            @if($errors->any())
+            @if($errors->any() && !$errors->has('throttle'))
             <div class="mb-6 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
                 @foreach($errors->all() as $error)
+                @if($error !== $errors->first('throttle'))
                 <p>{{ $error }}</p>
+                @endif
                 @endforeach
             </div>
             @endif
@@ -76,6 +94,7 @@
                         <input type="checkbox" name="remember" class="w-4 h-4 rounded bg-[#0a0e1a] border-[#1e2d4a] text-[#00d4ff] focus:ring-[#00d4ff]/50">
                         <span class="text-sm text-[#94a3b8]">Ingat saya</span>
                     </label>
+                    <a href="{{ route('lupa-password') }}" class="text-sm text-[#00d4ff] hover:underline font-medium">Lupa kata sandi?</a>
                 </div>
                 <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#7c3aed] text-white font-semibold hover:shadow-lg hover:shadow-[#00d4ff]/25 transition-all duration-300 hover:-translate-y-0.5">
                     Masuk

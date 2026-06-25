@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'cek.ratelimit' => \App\Http\Middleware\CekRateLimitScan::class,
             'cek.admin' => \App\Http\Middleware\CekAdmin::class,
             'scan.owner' => \App\Http\Middleware\CekPemilikScan::class,
+            'throttle.login' => \App\Http\Middleware\ThrottleLogin::class,
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {

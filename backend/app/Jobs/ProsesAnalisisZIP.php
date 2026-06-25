@@ -6,6 +6,7 @@ use App\Models\Scan;
 use App\Models\Temuan;
 use App\Models\SimulasiSerangan;
 use App\Services\AnalisisZIPService;
+use App\Traits\NotifyScanComplete;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 
 class ProsesAnalisisZIP implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, NotifyScanComplete;
 
     public int $tries = 3;
     public int $timeout = 300;
@@ -70,6 +71,8 @@ class ProsesAnalisisZIP implements ShouldQueue
             'progress_persen' => 100,
             'selesai_at' => now(),
         ]);
+
+        $this->notifyScanCompleteViaWa($this->scan);
 
         foreach ($hasil['temuan'] ?? [] as $t) {
             Temuan::create(array_merge(['scan_id' => $this->scan->id], array_intersect_key($t, array_flip([

@@ -21,13 +21,7 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'nama_lengkap' => ['nullable', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'phone' => ['required', 'string', 'max:20', Rule::unique('users')->ignore($user->id)],
-        ]);
-
+        // Normalisasi nomor telepon sebelum validasi
         $phone = $request->phone;
         $phone = preg_replace('/[^0-9]/', '', $phone);
         if (str_starts_with($phone, '0')) {
@@ -36,6 +30,18 @@ class ProfileController extends Controller
         if (!str_starts_with($phone, '62')) {
             $phone = '62' . $phone;
         }
+
+        // Merge back to request so validation uses the normalized value
+        $request->merge(['phone' => $phone]);
+
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'nama_lengkap' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'phone' => ['required', 'string', 'max:20', Rule::unique('users')->ignore($user->id)],
+        ], [
+            'phone.unique' => 'Nomor WhatsApp sudah digunakan oleh akun lain.',
+        ]);
 
         $user->update([
             'name' => $request->name,
@@ -51,7 +57,17 @@ class ProfileController extends Controller
     {
         $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => [
+                'required', 
+                'confirmed', 
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+            ],
+        ], [
+            'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+            'password.min' => 'Kata sandi minimal 8 karakter.',
         ]);
 
         Auth::user()->update([

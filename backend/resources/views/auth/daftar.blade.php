@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://www.google.com/recaptcha/api.js?render={{ config('app.env') === 'local' ? env('RECAPTCHA_SITE_KEY') : env('RECAPTCHA_SITE_KEY') }}"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="min-h-screen bg-[#0a0e1a] flex items-center justify-center p-4 antialiased">
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
@@ -61,14 +62,46 @@
                            class="w-full px-4 py-3 rounded-xl bg-[#0a0e1a] border border-[#1e2d4a] text-white placeholder-[#475569] focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff]/50 focus:outline-none transition-colors"
                            placeholder="081234567890">
                 </div>
-                <div>
+                
+                {{-- Alpine.js block untuk evaluasi kekuatan password --}}
+                <div x-data="passwordStrength()">
                     <label for="password" class="block text-sm font-medium text-[#94a3b8] mb-2">Kata Sandi</label>
-                    <input type="password" id="password" name="password" required
+                    <input type="password" id="password" name="password" required x-model="password" @input="checkStrength"
                            class="w-full px-4 py-3 rounded-xl bg-[#0a0e1a] border border-[#1e2d4a] text-white placeholder-[#475569] focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff]/50 focus:outline-none transition-colors"
-                           placeholder="Minimal 8 karakter">
+                           placeholder="Minimal 8 karakter, kombinasi kompleks">
+                    
+                    {{-- Visual Progress Bar --}}
+                    <div class="mt-3 w-full bg-[#1e2d4a] rounded-full h-1.5 flex overflow-hidden">
+                        <div class="h-full transition-all duration-300" :class="barColor" :style="'width: ' + scorePercent + '%'"></div>
+                    </div>
+
+                    {{-- Checklist Kriteria --}}
+                    <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-1.5" :class="hasLength ? 'text-green-400' : 'text-[#64748b]'">
+                            <svg x-show="hasLength" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <span x-show="!hasLength" class="w-3.5 h-3.5 inline-block border border-current rounded-full opacity-50"></span>
+                            Minimal 8 karakter
+                        </div>
+                        <div class="flex items-center gap-1.5" :class="hasMixedCase ? 'text-green-400' : 'text-[#64748b]'">
+                            <svg x-show="hasMixedCase" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <span x-show="!hasMixedCase" class="w-3.5 h-3.5 inline-block border border-current rounded-full opacity-50"></span>
+                            Huruf besar & kecil
+                        </div>
+                        <div class="flex items-center gap-1.5" :class="hasNumber ? 'text-green-400' : 'text-[#64748b]'">
+                            <svg x-show="hasNumber" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <span x-show="!hasNumber" class="w-3.5 h-3.5 inline-block border border-current rounded-full opacity-50"></span>
+                            Mengandung angka
+                        </div>
+                        <div class="flex items-center gap-1.5" :class="hasSymbol ? 'text-green-400' : 'text-[#64748b]'">
+                            <svg x-show="hasSymbol" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <span x-show="!hasSymbol" class="w-3.5 h-3.5 inline-block border border-current rounded-full opacity-50"></span>
+                            Karakter spesial
+                        </div>
+                    </div>
                 </div>
+
                 <div>
-                    <label for="password_confirmation" class="block text-sm font-medium text-[#94a3b8] mb-2">Konfirmasi Kata Sandi</label>
+                    <label for="password_confirmation" class="block text-sm font-medium text-[#94a3b8] mb-2 mt-2">Konfirmasi Kata Sandi</label>
                     <input type="password" id="password_confirmation" name="password_confirmation" required
                            class="w-full px-4 py-3 rounded-xl bg-[#0a0e1a] border border-[#1e2d4a] text-white placeholder-[#475569] focus:border-[#00d4ff] focus:ring-1 focus:ring-[#00d4ff]/50 focus:outline-none transition-colors"
                            placeholder="Ulangi kata sandi">
@@ -93,7 +126,49 @@
             <a href="{{ route('masuk') }}" class="text-[#00d4ff] hover:underline font-medium">Masuk di sini</a>
         </p>
     </div>
+
     <script>
+        // Alpine.js component untuk password strength
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('passwordStrength', () => ({
+                password: '',
+                score: 0,
+                hasLength: false,
+                hasMixedCase: false,
+                hasNumber: false,
+                hasSymbol: false,
+                
+                checkStrength() {
+                    let pw = this.password;
+                    this.hasLength = pw.length >= 8;
+                    this.hasMixedCase = /[a-z]/.test(pw) && /[A-Z]/.test(pw);
+                    this.hasNumber = /[0-9]/.test(pw);
+                    this.hasSymbol = /[^A-Za-z0-9]/.test(pw);
+                    
+                    let newScore = 0;
+                    if (this.hasLength) newScore += 25;
+                    if (this.hasMixedCase) newScore += 25;
+                    if (this.hasNumber) newScore += 25;
+                    if (this.hasSymbol) newScore += 25;
+                    
+                    this.score = newScore;
+                },
+                
+                get scorePercent() {
+                    return this.password.length === 0 ? 0 : this.score;
+                },
+                
+                get barColor() {
+                    if (this.score === 0) return 'bg-transparent';
+                    if (this.score <= 25) return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]';
+                    if (this.score <= 50) return 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]';
+                    if (this.score <= 75) return 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                    return 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]';
+                }
+            }))
+        });
+
+        // reCAPTCHA init
         document.addEventListener("DOMContentLoaded", function() {
             const form = document.querySelector("form");
             form.addEventListener("submit", function(e) {

@@ -17,7 +17,7 @@ Route::get('/', fn() => view('landing'))->name('beranda');
 // Auth
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', [AuthController::class, 'formMasuk'])->name('masuk');
-    Route::post('/masuk', [AuthController::class, 'prosesMasuk']);
+    Route::post('/masuk', [AuthController::class, 'prosesMasuk'])->middleware('throttle.login');
     Route::get('/daftar', [AuthController::class, 'formDaftar'])->name('daftar');
     Route::post('/daftar', [AuthController::class, 'prosesDaftar']);
     Route::get('/menunggu-verifikasi', [AuthController::class, 'menungguVerifikasi'])->name('menunggu-verifikasi');
@@ -27,6 +27,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/otp/kirim', [AuthController::class, 'kirimOtp'])->name('otp.kirim');
     Route::get('/otp/verifikasi', [AuthController::class, 'formVerifikasiOtp'])->name('otp.verifikasi');
     Route::post('/otp/verifikasi', [AuthController::class, 'verifikasiOtp'])->name('otp.proses-verifikasi');
+
+    // Lupa Password via WhatsApp
+    Route::get('/lupa-password', [AuthController::class, 'formLupaPassword'])->name('lupa-password');
+    Route::post('/lupa-password', [AuthController::class, 'prosesLupaPassword'])->name('lupa-password.proses');
+    Route::get('/reset-password/{token}', [AuthController::class, 'formResetPassword'])->name('reset-password');
+    Route::post('/reset-password/{token}', [AuthController::class, 'prosesResetPassword'])->name('reset-password.proses');
 });
 
 // Public Edukasi

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\PasswordResetWa;
 use App\Models\User;
 use App\Services\FonnteService;
 use Illuminate\Http\Request;
@@ -77,6 +78,9 @@ class AuthController extends Controller
                 'description' => 'Pengguna berhasil login menggunakan form email/password.',
             ]);
 
+            // Kirim notifikasi login via WhatsApp (async, tidak block response)
+            $this->kirimNotifikasiLogin(Auth::user(), 'Email & Password');
+
             return redirect()->intended('/dashboard');
         }
 
@@ -97,7 +101,14 @@ class AuthController extends Controller
             'nama_lengkap' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->mixedCase()     // Harus ada huruf besar dan kecil
+                    ->numbers()       // Harus ada angka
+                    ->symbols(),      // Harus ada simbol/karakter spesial
+            ],
             'g-recaptcha-response' => 'required',
         ], [
             'name.required' => 'Nama pengguna wajib diisi.',
@@ -107,7 +118,6 @@ class AuthController extends Controller
             'password.required' => 'Kata sandi wajib diisi.',
             'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
             'password.min' => 'Kata sandi minimal 8 karakter.',
-            'g-recaptcha-response.required' => 'Verifikasi reCAPTCHA gagal.',
         ]);
 
         // Verifikasi reCAPTCHA v3
@@ -244,6 +254,9 @@ class AuthController extends Controller
             'description' => 'Pengguna login via OTP WhatsApp.',
         ]);
 
+        // Kirim notifikasi login via WhatsApp
+        $this->kirimNotifikasiLogin($user, 'OTP WhatsApp');
+
         return redirect('/dashboard');
     }
 
@@ -298,7 +311,122 @@ class AuthController extends Controller
             'description' => 'Pengguna login menggunakan akun Google.',
         ]);
 
+        // Kirim notifikasi login via WhatsApp
+        $this->kirimNotifikasiLogin($user, 'Google OAuth');
+
         return redirect('/dashboard');
+    }
+
+    // ========== LUPA PASSWORD VIA WHATSAPP ==========
+
+    public function formLupaPassword()
+    {
+        return view('auth.lupa-password');
+    }
+
+    public function prosesLupaPassword(Request $request, FonnteService $fonnte)
+    {
+        $request->validate([
+            'phone' => 'required|string|max:20',
+        ], [
+            'phone.required' => 'Nomor WhatsApp wajib diisi.',
+        ]);
+
+        $phone = $this->normalizePhone($request->phone);
+        $user = User::where('phone', $phone)->first();
+
+        if (!$user) {
+            return back()->withErrors(['phone' => 'Nomor WhatsApp tidak terdaftar.'])->withInput();
+        }
+
+        // Hapus token sebelumnya yang belum digunakan
+        PasswordResetWa::where('phone', $phone)->where('used', false)->delete();
+
+        // Generate token unik
+        $token = Str::random(64);
+
+        PasswordResetWa::create([
+            'phone' => $phone,
+            'token' => $token,
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        // Buat link reset password
+        $resetUrl = route('reset-password', ['token' => $token]);
+
+        // Kirim link via WhatsApp
+        $sent = $fonnte->sendPasswordResetLink($phone, $resetUrl);
+
+        if (!$sent) {
+            return back()->withErrors(['phone' => 'Gagal mengirim link reset. Pastikan nomor WhatsApp aktif.'])->withInput();
+        }
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'action' => 'lupa_password',
+            'description' => 'Pengguna meminta reset password via WhatsApp.',
+        ]);
+
+        return back()->with('success', 'Link reset password telah dikirim ke WhatsApp Anda. Link berlaku selama 5 menit.');
+    }
+
+    public function formResetPassword(string $token)
+    {
+        $reset = PasswordResetWa::where('token', $token)->first();
+
+        if (!$reset || !$reset->isValid()) {
+            return redirect()->route('lupa-password')
+                ->withErrors(['token' => 'Link reset password sudah kedaluwarsa atau tidak valid. Silakan minta link baru.']);
+        }
+
+        return view('auth.reset-password', ['token' => $token]);
+    }
+
+    public function prosesResetPassword(Request $request, string $token)
+    {
+        $reset = PasswordResetWa::where('token', $token)->first();
+
+        if (!$reset || !$reset->isValid()) {
+            return redirect()->route('lupa-password')
+                ->withErrors(['token' => 'Link reset password sudah kedaluwarsa atau tidak valid.']);
+        }
+
+        $request->validate([
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols(),
+            ],
+        ], [
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+        ]);
+
+        $user = User::where('phone', $reset->phone)->first();
+
+        if (!$user) {
+            return redirect()->route('lupa-password')
+                ->withErrors(['token' => 'Akun tidak ditemukan.']);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Tandai token sebagai sudah digunakan
+        $reset->update(['used' => true]);
+
+        AuditLog::create([
+            'user_id' => $user->id,
+            'action' => 'reset_password',
+            'description' => 'Pengguna berhasil mereset password via WhatsApp.',
+        ]);
+
+        return redirect()->route('masuk')
+            ->with('success', 'Kata sandi berhasil direset. Silakan masuk dengan kata sandi baru Anda.');
     }
 
     // ========== LOGOUT ==========
@@ -336,5 +464,20 @@ class AuthController extends Controller
             $phone = '62' . $phone;
         }
         return $phone;
+    }
+
+    /**
+     * Kirim notifikasi login via WhatsApp (non-blocking).
+     */
+    protected function kirimNotifikasiLogin(User $user, string $method): void
+    {
+        if (empty($user->phone)) return;
+
+        try {
+            $fonnte = app(FonnteService::class);
+            $fonnte->sendLoginNotification($user->phone, $user->name, $method);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning("Gagal kirim notifikasi login WA: " . $e->getMessage());
+        }
     }
 }

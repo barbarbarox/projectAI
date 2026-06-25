@@ -67,4 +67,60 @@ class FonnteService
 
         return $this->sendMessage($phone, $message);
     }
+
+    /**
+     * Kirim notifikasi login berhasil via WhatsApp.
+     */
+    public function sendLoginNotification(string $phone, string $userName, string $method = 'email'): bool
+    {
+        $waktu = now()->setTimezone('Asia/Jakarta')->format('d M Y, H:i:s') . ' WIB';
+
+        $message = "🔔 *Notifikasi Login RedSim*\n\n"
+            . "Halo *{$userName}*,\n\n"
+            . "Akun Anda baru saja berhasil login ke sistem RedSim.\n\n"
+            . "📅 Waktu: {$waktu}\n"
+            . "🔑 Metode: {$method}\n\n"
+            . "Jika ini bukan Anda, segera amankan akun Anda.\n\n"
+            . "— Tim RedSim";
+
+        return $this->sendMessage($phone, $message);
+    }
+
+    /**
+     * Kirim notifikasi scan selesai via WhatsApp.
+     */
+    public function sendScanComplete(string $phone, string $userName, string $target, string $tipeScan, ?int $skorKeamanan = null): bool
+    {
+        $waktu = now()->setTimezone('Asia/Jakarta')->format('d M Y, H:i:s') . ' WIB';
+        $skorText = $skorKeamanan !== null ? "{$skorKeamanan}/100" : 'N/A';
+
+        $message = "✅ *Hasil Scan RedSim*\n\n"
+            . "Halo *{$userName}*,\n\n"
+            . "Scan Anda telah selesai diproses!\n\n"
+            . "📌 Target: {$target}\n"
+            . "🔍 Tipe: {$tipeScan}\n"
+            . "🛡️ Skor Keamanan: {$skorText}\n"
+            . "📅 Waktu: {$waktu}\n\n"
+            . "Silakan cek dashboard RedSim untuk melihat hasil lengkap.\n\n"
+            . "— Tim RedSim";
+
+        return $this->sendMessage($phone, $message);
+    }
+
+    /**
+     * Kirim link reset password via WhatsApp.
+     */
+    public function sendPasswordResetLink(string $phone, string $resetUrl): bool
+    {
+        $message = "🔐 *Reset Password RedSim*\n\n"
+            . "Anda meminta untuk mereset kata sandi akun RedSim Anda.\n\n"
+            . "Klik link berikut untuk mengatur kata sandi baru:\n"
+            . "{$resetUrl}\n\n"
+            . "⏰ Link ini berlaku selama *5 menit*.\n"
+            . "Jika Anda tidak meminta reset password, abaikan pesan ini.\n\n"
+            . "— Tim RedSim";
+
+        return $this->sendMessage($phone, $message);
+    }
 }
+
